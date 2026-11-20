@@ -86,12 +86,43 @@ def main(
     csv_path: Path,
     id_col_name: str,
     source_value_col_name: str,
+    domain_ids: list[str] | None = None,
+    vocabulary_ids: list[str] | None = None,
+    concept_class_ids: list[str] | None = None,
+    only_standard_concepts: bool = False,
     extra_to_add: dict[str, Any] | None = None,
     mutate_concept_id: Callable[[str], str] | None = None,
 ):
+    """
+    Run.
+
+    Parameters
+    ----------
+    csv_path :
+        Path to csv file.
+    id_col_name :
+        Name of OMOP id column to save ids to.
+    source_value_col_name :
+        Name of source value to do string matching on.
+    domain_ids, vocabularly_ids, concept_class_ids :
+        Provide a list of valid domain/vocab/concept IDs to filter the vocabulary on.
+        By default no filtering is done.
+    only_standard_concepts :
+        If *True*, only match to standard concepts.
+    extra_to_add :
+        Extra columns to add static values to (defaults to none).
+    mutate_concept_name :
+        A function to mutate the OMOP concept name before doing string
+        matching to the source value. This can help to massage the OMOP
+        concept names into a format more similar to the source values
+        before matching them.
+    """
 
     concepts = load_concepts(
-        domain_ids=["Regimen"], vocabulary_ids=["HemOnc"], only_standard_concepts=True
+        domain_ids=domain_ids,
+        vocabulary_ids=vocabulary_ids,
+        concept_class_ids=concept_class_ids,
+        only_standard_concepts=only_standard_concepts,
     )
 
     retriever = create_retriever(
@@ -140,19 +171,3 @@ def main(
         print(f"🌳 Assigning concept ID {concept_id} to '{source_value}'")
         print()
         df_new.to_csv(csv_path, index=False)
-
-
-if __name__ == "__main__":
-    # When feeding in names to the corpus, strip 'monotherapy'. This is present in OMOP,
-    # but not in Caboodle, so hopefully that should help matching
-    strip_monotherapy = lambda s: s.lower().replace("monotherapy").strip()
-    csv_path = Path(
-        r"C:\Users\stansbyd\software\omop_es\mapping\CUH\local_mappings\epic\chemo_protocols.csv"
-    )
-    main(
-        csv_path=csv_path,
-        id_col_name="episode_object_concept_id",
-        source_value_col_name="ProtocolName",
-        extra_to_add={"quality_control_scale": "L2_HUMAN_REVIEW"},
-        mutate_concept_id=strip_monotherapy,
-    )
